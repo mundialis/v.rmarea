@@ -1,7 +1,14 @@
+
 MODULE_TOPDIR = ../..
 
-PGM = v.example
+PGM = v.rmarea
 
-include $(MODULE_TOPDIR)/include/Make/Script.make
+LIBES = $(VECTORLIB) $(DIG2LIB) $(DBMILIB) $(GISLIB)
+DEPENDENCIES = $(VECTORDEP) $(DIG2DEP) $(DBMIDEP) $(GISDEP)
+EXTRA_INC = $(VECT_INC)
+EXTRA_CFLAGS = $(VECT_CFLAGS)
+CLEAN_SUBDIRS = test
 
-default: script
+include $(MODULE_TOPDIR)/include/Make/Module.make
+
+default: cmd
