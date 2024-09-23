@@ -81,10 +81,10 @@ static int comp_attrs(struct line_cats *ACats, struct line_cats *BCats,
 
 
 int remove_small_areas_nat(struct Map_info *, double, struct Map_info *,
-                           double *, int, char **);
+                           double *, int, dbCatValArray *, int);
 
 int remove_small_areas_ext(struct Map_info *, double, struct Map_info *,
-                           double *, int, char **);
+                           double *, int, dbCatValArray *, int);
 
 /*!
    \brief Remove small areas from the map map.
@@ -103,18 +103,18 @@ int remove_small_areas_ext(struct Map_info *, double, struct Map_info *,
 
 int remove_small_areas(struct Map_info *Map, double thresh,
                        struct Map_info *Err, double *removed_area,
-                       int layer, char **columns)
+                       int layer, dbCatValArray *cvarr, int ncols)
 {
 
     if (Map->format == GV_FORMAT_NATIVE)
-        return remove_small_areas_nat(Map, thresh, Err, removed_area, layer, columns);
+        return remove_small_areas_nat(Map, thresh, Err, removed_area, layer, cvarr, ncols);
     else
-        return remove_small_areas_ext(Map, thresh, Err, removed_area, layer, columns);
+        return remove_small_areas_ext(Map, thresh, Err, removed_area, layer, cvarr, ncols);
 }
 
 int remove_small_areas_ext(struct Map_info *Map, double thresh,
                            struct Map_info *Err, double *removed_area,
-                           int layer, char **columns)
+                           int layer, dbCatValArray *cvarr, int ncols)
 {
     int area, nareas;
     int nremoved = 0;
@@ -124,67 +124,7 @@ int remove_small_areas_ext(struct Map_info *Map, double thresh,
     struct line_cats *ACats;
     struct line_cats *BCats;
     double size_removed = 0.0;
-    int ncols, ncols_table, col, nrec, i, j;
-    struct field_info *Fi = NULL;
-    dbDriver *driver = NULL;
-    dbString table_name;
-    dbTable *table;
-    dbCatValArray *cvarr;
-    char *catcol;
-    const char *colname;
-
-    List = Vect_new_list();
-    AList = Vect_new_list();
-    Points = Vect_new_line_struct();
-    ACats = Vect_new_cats_struct();
-    BCats = Vect_new_cats_struct();
-
-    /* columns */
-    ncols = 0;
-    while (columns[ncols]) {
-        ncols++;
-    }
-
-    G_debug(1, "Number of columns to check: %d", ncols);
-
-    Fi = Vect_get_field(Map, layer);
-    if (Fi == NULL)
-        G_fatal_error(_("Database connection not defined for layer %d"), layer);
-    catcol = Fi->key;
-    driver = db_start_driver_open_database(Fi->driver, Fi->database);
-    db_init_string(&table_name);
-    db_set_string(&table_name, Fi->table);
-    if (db_describe_table(driver, &table_name, &table) != DB_OK)
-        G_fatal_error(_("Unable to describe table <%s>"), Fi->table);
-
-    ncols_table = db_get_table_number_of_columns(table);
-    cvarr = G_malloc(sizeof(dbCatValArray) * ncols);
-
-    G_debug(1, "Number of columns in table: %d", ncols_table);
-
-    G_message("Copy attributes for %d columns ...", ncols);
-
-    i = 0;
-    for (col = 0; col < ncols_table; col++) {
-        int use_col = 0;
-
-        colname = db_get_column_name(db_get_table_column(table, col));
-        for (j = 0; j < ncols; j++) {
-            if (strcmp(colname, columns[j]) == 0) {
-                use_col = 1;
-                break;
-            }
-        }
-
-        if (use_col) {
-            db_CatValArray_init(&cvarr[i]);
-            nrec = db_select_CatValArray(driver, Fi->table, catcol, colname, NULL,
-                                         &cvarr[i]);
-            i++;
-        }
-    }
-    db_close_database_shutdown_driver(driver);
-    driver = NULL;
+    int i, j;
 
     List = Vect_new_list();
     AList = Vect_new_list();
@@ -376,7 +316,7 @@ int remove_small_areas_ext(struct Map_info *Map, double thresh,
 /* much faster version */
 int remove_small_areas_nat(struct Map_info *Map, double thresh,
                            struct Map_info *Err, double *removed_area,
-                           int layer, char **columns)
+                           int layer, dbCatValArray *cvarr, int ncols)
 {
     int area, nareas;
     int nremoved = 0;
@@ -392,14 +332,7 @@ int remove_small_areas_nat(struct Map_info *Map, double thresh,
     int dissolve_neighbour;
     int line, left, right, neighbour;
     int nisles, nnisles;
-    int ncols, ncols_table, col, nrec, i, j;
-    struct field_info *Fi = NULL;
-    dbDriver *driver = NULL;
-    dbString table_name;
-    dbTable *table;
-    dbCatValArray *cvarr;
-    char *catcol;
-    const char *colname;
+    int i, j;
 
     List = Vect_new_list();
     AList = Vect_new_list();
@@ -409,53 +342,6 @@ int remove_small_areas_nat(struct Map_info *Map, double thresh,
     Points = Vect_new_line_struct();
     ACats = Vect_new_cats_struct();
     BCats = Vect_new_cats_struct();
-
-    /* columns */
-    ncols = 0;
-    while (columns[ncols]) {
-        ncols++;
-    }
-
-    G_debug(1, "Number of columns to check: %d", ncols);
-
-    Fi = Vect_get_field(Map, layer);
-    if (Fi == NULL)
-        G_fatal_error(_("Database connection not defined for layer %d"), layer);
-    catcol = Fi->key;
-    driver = db_start_driver_open_database(Fi->driver, Fi->database);
-    db_init_string(&table_name);
-    db_set_string(&table_name, Fi->table);
-    if (db_describe_table(driver, &table_name, &table) != DB_OK)
-        G_fatal_error(_("Unable to describe table <%s>"), Fi->table);
-
-    ncols_table = db_get_table_number_of_columns(table);
-    cvarr = G_malloc(sizeof(dbCatValArray) * ncols);
-
-    G_debug(1, "Number of columns in table: %d", ncols_table);
-
-    G_message("Copy attributes for %d columns ...", ncols);
-
-    i = 0;
-    for (col = 0; col < ncols_table; col++) {
-        int use_col = 0;
-
-        colname = db_get_column_name(db_get_table_column(table, col));
-        for (j = 0; j < ncols; j++) {
-            if (strcmp(colname, columns[j]) == 0) {
-                use_col = 1;
-                break;
-            }
-        }
-
-        if (use_col) {
-            db_CatValArray_init(&cvarr[i]);
-            nrec = db_select_CatValArray(driver, Fi->table, catcol, colname, NULL,
-                                         &cvarr[i]);
-            i++;
-        }
-    }
-    db_close_database_shutdown_driver(driver);
-    driver = NULL;
 
     nareas = Vect_get_num_areas(Map);
     for (area = 1; area <= nareas; area++) {

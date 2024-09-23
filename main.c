@@ -42,6 +42,16 @@ int main(int argc, char *argv[])
     int count;
     double size;
     int layer;
+    int ncols, ncols_table, col, nrec, i, j;
+    struct field_info *Fi = NULL;
+    dbDriver *driver = NULL;
+    dbString table_name;
+    dbTable *table;
+    dbCatValArray *cvarr;
+    char *catcol;
+    char **columns;
+    const char *colname;
+
 
     G_gisinit(argv[0]);
 
@@ -131,24 +141,59 @@ int main(int argc, char *argv[])
 
     native = Vect_maptype(&Out) == GV_FORMAT_NATIVE;
 
-    if (!native) {
-        /* area cleaning tools might produce unexpected results for
-         * non-native vectors */
-        G_warning(_(
-            "Topological cleaning works best with native GRASS vector format"));
-        /* Copy attributes (OGR format) */
-        Vect_copy_map_dblinks(&In, &Out, TRUE);
+    /* columns */
+    layer = Vect_get_field_number(&Out, opt.field->answer);
+    ncols = 0;
+    columns = opt.cols->answers;
+    while (columns[ncols]) {
+        ncols++;
     }
+
+    G_debug(1, "Number of columns to check: %d", ncols);
+
+    Fi = Vect_get_field(&In, layer);
+    if (Fi == NULL)
+        G_fatal_error(_("Database connection not defined for layer %d"), layer);
+    catcol = Fi->key;
+    driver = db_start_driver_open_database(Fi->driver, Fi->database);
+    db_init_string(&table_name);
+    db_set_string(&table_name, Fi->table);
+    if (db_describe_table(driver, &table_name, &table) != DB_OK)
+        G_fatal_error(_("Unable to describe table <%s>"), Fi->table);
+
+    ncols_table = db_get_table_number_of_columns(table);
+    cvarr = G_malloc(sizeof(dbCatValArray) * ncols);
+
+    G_debug(1, "Number of columns in table: %d", ncols_table);
+
+    G_message("Copy attributes for %d columns ...", ncols);
+
+    i = 0;
+    for (col = 0; col < ncols_table; col++) {
+        int use_col = 0;
+
+        colname = db_get_column_name(db_get_table_column(table, col));
+        for (j = 0; j < ncols; j++) {
+            if (strcmp(colname, columns[j]) == 0) {
+                use_col = 1;
+                break;
+            }
+        }
+
+        if (use_col) {
+            db_CatValArray_init(&cvarr[i]);
+            nrec = db_select_CatValArray(driver, Fi->table, catcol, colname, NULL,
+                                         &cvarr[i]);
+            i++;
+        }
+    }
+    db_close_database_shutdown_driver(driver);
+    driver = NULL;
 
     /* This works for both level 1 and 2 */
     Vect_copy_map_lines_field(
         &In, Vect_get_field_number(&In, opt.field->answer), &Out);
 
-    if (native) {
-        /* Copy attribute tables (native format only) */
-        if (Vect_copy_tables(&In, &Out, 0))
-            G_warning(_("Failed to copy attribute table to output vector map"));
-    }
     Vect_set_release_support(&In);
     Vect_close(&In);
 
@@ -163,9 +208,8 @@ int main(int argc, char *argv[])
     }
 
     G_message(_("Tool: Remove small areas"));
-    layer = Vect_get_field_number(&Out, opt.field->answer);
     /* new function to also consider attributes */
-    count = remove_small_areas(&Out, thresh, pErr, &size, layer, opt.cols->answers);
+    count = remove_small_areas(&Out, thresh, pErr, &size, layer, cvarr, ncols);
     if (count > 0) {
         Vect_build_partial(&Out, GV_BUILD_BASE);
         G_message(SEP);
@@ -183,6 +227,13 @@ int main(int argc, char *argv[])
     else {
         Vect_build_partial(&Out, GV_BUILD_NONE); /* -> topo not saved */
     }
+
+    if (Vect_open_old2(&In, opt.in->answer, "", opt.field->answer) < 0)
+        G_fatal_error(_("Unable to open vector map <%s>"), opt.in->answer);
+
+    copy_tabs(&In, &Out);
+
+    Vect_close(&In);
     Vect_close(&Out);
 
     if (pErr) {
