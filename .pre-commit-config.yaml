@@ -14,3 +14,13 @@ repos:
     rev: 1.0.3
     hooks:
     -   id: linting
+- repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v18.1.8
+    hooks:
+      - id: clang-format
+        types_or: [c, c++, javascript, json, objective-c]
+        exclude: |
+          (?x)^(
+                man/jquery.fixedheadertable.min.js$|
+                .*\.ipynb$
+          )
