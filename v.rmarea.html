@@ -1,0 +1,52 @@
+<h2>DESCRIPTION</h2>
+
+<em>v.rmarea</em> removes small areas similar to <em><a href="v.clean.html">v.clean</a></em>. 
+The main difference is that small areas are merged with a neighboring area 
+with identical attributes in the specified <em>columns</em>. 
+An error map is optionally written which stores the erroneous
+geometries.
+
+
+<h3>Remove small areas</h3>
+<em>tool=rmarea</em>
+<p>
+The <em>rmarea</em> tool attempts to remove areas &lt;= <em>thresh</em>. The
+longest boundary with an adjacent area with identical attributes is removed. 
+If there is no adjacent area with identical attributes, the area is left unchanged,
+even if it is smaller than <em>thresh</em>.
+<p>
+Threshold must always be in square meters, also for latitude-longitude
+projects or projects with units other than meters.
+
+<h2>NOTES</h2>
+
+The user does <b>not</b> have to run <em><a href="v.build.html">v.build</a></em>
+on the <em>output</em> vector, unless the <em>-b</em> flag was used. The
+<em>-b</em> flag affects <b>only</b> the <em>output</em> vector -
+topology is always built for <em>error</em> vector.
+
+<h2>EXAMPLES</h2>
+
+<h3>Remove areas smaller than 10 m<sup>2</sup></h3>
+<div class="code"><pre>
+v.rmarea input=testmap output=cleanmap threshold=10 columns=label
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="v.clean.html">v.clean</a>,
+<a href="v.info.html">v.info</a>,
+<a href="v.build.html">v.build</a>,
+<a href="g.gui.vdigit.html">g.gui.vdigit</a>,
+<a href="v.edit.html">v.edit</a>,
+<a href="v.fill.holes.html">v.fill.holes</a>,
+<a href="v.generalize.html">v.generalize</a>
+</em>
+
+<h2>AUTHORS</h2>
+
+David Gerdes, U.S. Army Construction Engineering Research Laboratory<br>
+Radim Blazek, ITC-irst, Trento, Italy<br>
+Martin Landa, FBK-irst (formerly ITC-irst), Trento, Italy<br>
+Markus Metz, mundialis
