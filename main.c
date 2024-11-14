@@ -39,7 +39,7 @@ int main(int argc, char *argv[])
         struct Flag *no_build;
     } flag;
     double thresh;
-    int count;
+    int count, count_total;
     double size;
     int layer;
     int ncols, ncols_table, col, nrec, i, j;
@@ -182,8 +182,8 @@ int main(int argc, char *argv[])
 
         if (use_col) {
             db_CatValArray_init(&cvarr[i]);
-            nrec = db_select_CatValArray(driver, Fi->table, catcol, colname, NULL,
-                                         &cvarr[i]);
+            nrec = db_select_CatValArray(driver, Fi->table, catcol, colname,
+                                         NULL, &cvarr[i]);
             i++;
         }
     }
@@ -209,8 +209,20 @@ int main(int argc, char *argv[])
 
     G_message(_("Tool: Remove small areas"));
     /* new function to also consider attributes */
-    count = remove_small_areas(&Out, thresh, pErr, &size, layer, cvarr, ncols);
-    if (count > 0) {
+    count_total = 0;
+    count = 1;
+    while (count > 0) {
+        count = remove_small_areas(&Out, thresh, pErr, &size, layer, cvarr,
+                                   ncols);
+        if (count > 0) {
+            count_total += count;
+            
+            Vect_build_partial(&Out, GV_BUILD_NONE);
+            Vect_build_partial(&Out, GV_BUILD_CENTROIDS);
+        }
+    }
+
+    if (count_total > 0) {
         Vect_build_partial(&Out, GV_BUILD_BASE);
         G_message(SEP);
         G_message(_("Tool: Merge boundaries"));
