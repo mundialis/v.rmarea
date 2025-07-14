@@ -33,10 +33,10 @@ int main(int argc, char *argv[])
     int with_z, native;
     struct GModule *module;
     struct {
-        struct Option *in, *field, *out, *thresh, *err, *cols;
+        struct Option *in, *field, *out, *thresh, *err, *cols, *where, *cats;
     } opt;
     struct {
-        struct Flag *no_build;
+        struct Flag *no_build, *at_boundary;
     } flag;
     double thresh;
     int count, count_total;
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
     char *catcol;
     char **columns;
     const char *colname;
-
+    struct cat_list *cat_list = NULL;
 
     G_gisinit(argv[0]);
 
@@ -67,6 +67,12 @@ int main(int argc, char *argv[])
     opt.field = G_define_standard_option(G_OPT_V_FIELD);
     opt.field->answer = "1";
     opt.field->guisection = _("Selection");
+
+    opt.cats = G_define_standard_option(G_OPT_V_CATS);
+    opt.cats->guisection = _("Selection");
+
+    opt.where = G_define_standard_option(G_OPT_DB_WHERE);
+    opt.where->guisection = _("Selection");
 
     opt.cols = G_define_standard_option(G_OPT_DB_COLUMNS);
     opt.cols->required = YES;
@@ -91,6 +97,13 @@ int main(int argc, char *argv[])
     flag.no_build->description =
         _("Do not build topology for the output vector");
 
+    flag.at_boundary = G_define_flag();
+    flag.at_boundary->key = 'n';
+    flag.at_boundary->label =
+        _("Only remove areas along boundaries of reference areas");
+    flag.at_boundary->description =
+        _("At least one neighboring area must have selected attributes different from the current area");
+
     if (G_parser(argc, argv))
         exit(EXIT_FAILURE);
 
@@ -100,14 +113,6 @@ int main(int argc, char *argv[])
                                      G_FATAL_EXIT);
     }
 
-    /* Read threshold */
-    thresh = atof(opt.thresh->answer);
-    G_message(_("Tool: Threshold"));
-
-    G_message("%s: %.15g", _("Remove small areas"), thresh);
-
-    G_message(SEP);
-
     /* Input vector may be both on level 1 and 2. Level 2 is necessary for
      * virtual centroids (shapefile/OGR) and level 1 is better if input is too
      * big and build in previous module (like v.in.ogr or other call to v.clean)
@@ -116,6 +121,28 @@ int main(int argc, char *argv[])
         G_fatal_error(_("Unable to open vector map <%s>"), opt.in->answer);
 
     with_z = Vect_is_3d(&In);
+
+    layer = Vect_get_field_number(&In, opt.field->answer);
+
+    if ((opt.cats->answer || opt.where->answer) && layer == -1) {
+        G_warning(_("Invalid layer number (%d). Parameter '%s' or '%s' "
+                    "specified, assuming layer '1'."),
+                  layer, opt.cats->key, opt.where->key);
+        layer = 1;
+    }
+
+    cat_list = NULL;
+    if (layer > 0)
+        cat_list = Vect_cats_set_constraint(&In, layer, opt.where->answer,
+                                            opt.cats->answer);
+
+    /* Read threshold */
+    thresh = atof(opt.thresh->answer);
+    G_message(_("Tool: Threshold"));
+
+    G_message("%s: %.15g", _("Remove small areas"), thresh);
+
+    G_message(SEP);
 
     if (Vect_open_new(&Out, opt.out->answer, with_z) < 0)
         G_fatal_error(_("Unable to create vector map <%s>"), opt.out->answer);
@@ -142,7 +169,6 @@ int main(int argc, char *argv[])
     native = Vect_maptype(&Out) == GV_FORMAT_NATIVE;
 
     /* columns */
-    layer = Vect_get_field_number(&Out, opt.field->answer);
     ncols = 0;
     columns = opt.cols->answers;
     while (columns[ncols]) {
@@ -213,7 +239,7 @@ int main(int argc, char *argv[])
     count = 1;
     while (count > 0) {
         count = remove_small_areas(&Out, thresh, pErr, &size, layer, cvarr,
-                                   ncols);
+                                   ncols, cat_list, flag.at_boundary->answer);
         if (count > 0) {
             count_total += count;
             

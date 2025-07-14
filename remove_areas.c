@@ -81,10 +81,10 @@ static int comp_attrs(struct line_cats *ACats, struct line_cats *BCats,
 
 
 int remove_small_areas_nat(struct Map_info *, double, struct Map_info *,
-                           double *, int, dbCatValArray *, int);
+                           double *, int, dbCatValArray *, int, struct cat_list *, int);
 
 int remove_small_areas_ext(struct Map_info *, double, struct Map_info *,
-                           double *, int, dbCatValArray *, int);
+                           double *, int, dbCatValArray *, int, struct cat_list *, int);
 
 /*!
    \brief Remove small areas from the map map.
@@ -103,18 +103,20 @@ int remove_small_areas_ext(struct Map_info *, double, struct Map_info *,
 
 int remove_small_areas(struct Map_info *Map, double thresh,
                        struct Map_info *Err, double *removed_area,
-                       int layer, dbCatValArray *cvarr, int ncols)
+                       int layer, dbCatValArray *cvarr, int ncols,
+                       struct cat_list *cat_list, int at_boundary)
 {
 
     if (Map->format == GV_FORMAT_NATIVE)
-        return remove_small_areas_nat(Map, thresh, Err, removed_area, layer, cvarr, ncols);
+        return remove_small_areas_nat(Map, thresh, Err, removed_area, layer, cvarr, ncols, cat_list, at_boundary);
     else
-        return remove_small_areas_ext(Map, thresh, Err, removed_area, layer, cvarr, ncols);
+        return remove_small_areas_ext(Map, thresh, Err, removed_area, layer, cvarr, ncols, cat_list, at_boundary);
 }
 
 int remove_small_areas_ext(struct Map_info *Map, double thresh,
                            struct Map_info *Err, double *removed_area,
-                           int layer, dbCatValArray *cvarr, int ncols)
+                           int layer, dbCatValArray *cvarr, int ncols,
+                           struct cat_list *cat_list, int at_boundary)
 {
     int area, nareas;
     int nremoved = 0;
@@ -124,6 +126,7 @@ int remove_small_areas_ext(struct Map_info *Map, double thresh,
     struct line_cats *ACats;
     struct line_cats *BCats;
     double size_removed = 0.0;
+    int different_neighbors;
     int i, j;
 
     List = Vect_new_list();
@@ -154,9 +157,13 @@ int remove_small_areas_ext(struct Map_info *Map, double thresh,
 
         Vect_read_line(Map, NULL, ACats, centroid);
 
+        if (layer > 0 && !Vect_cats_in_constraint(ACats, layer, cat_list))
+            continue;
+
         /* Find adjacent areas with identical attributes */
 
         Vect_get_area_boundaries(Map, area, List);
+        different_neighbors = 0;
 
         /* Create a list of neighbour areas */
         Vect_reset_list(AList);
@@ -184,10 +191,19 @@ int remove_small_areas_ext(struct Map_info *Map, double thresh,
                 if (comp_attrs(ACats, BCats, cvarr, layer, ncols) == 0) {
                     Vect_list_append(AList, neighbour); /* this checks for duplicity */
                 }
+                else {
+                    /* neighbor with different attributes */
+                    different_neighbors++;
+                }
             }
             Vect_list_append(AList, neighbour); /* this checks for duplicity */
         }
         G_debug(3, "num neighbours = %d", AList->n_values);
+
+        /* only dissolve areas if there is at least one different neighbor
+         * enforces dissolving only along boundaries of reference areas */
+        if (at_boundary && !different_neighbors)
+            continue;
 
         /* Go through the list of neighbours and find that with the longest
          * boundary */
@@ -316,7 +332,8 @@ int remove_small_areas_ext(struct Map_info *Map, double thresh,
 /* much faster version */
 int remove_small_areas_nat(struct Map_info *Map, double thresh,
                            struct Map_info *Err, double *removed_area,
-                           int layer, dbCatValArray *cvarr, int ncols)
+                           int layer, dbCatValArray *cvarr, int ncols,
+                           struct cat_list *cat_list, int at_boundary)
 {
     int area, nareas;
     int nremoved = 0;
@@ -329,7 +346,7 @@ int remove_small_areas_nat(struct Map_info *Map, double thresh,
     struct line_cats *ACats;
     struct line_cats *BCats;
     double size_removed = 0.0;
-    int dissolve_neighbour;
+    int dissolve_neighbour, different_neighbors;
     int line, left, right, neighbour;
     int nisles, nnisles;
     int i, j;
@@ -366,9 +383,13 @@ int remove_small_areas_nat(struct Map_info *Map, double thresh,
 
         Vect_read_line(Map, NULL, ACats, centroid);
 
+        if (layer > 0 && !Vect_cats_in_constraint(ACats, layer, cat_list))
+            continue;
+
         /* Find adjacent areas with identical attributes */
 
         Vect_get_area_boundaries(Map, area, List);
+        different_neighbors = 0;
 
         /* Create a list of neighbour areas */
         Vect_reset_list(AList);
@@ -403,10 +424,19 @@ int remove_small_areas_nat(struct Map_info *Map, double thresh,
                 if (comp_attrs(ACats, BCats, cvarr, layer, ncols) == 0) {
                     Vect_list_append(AList, neighbour); /* this checks for duplicity */
                 }
+                else {
+                    /* neighbor with different attributes */
+                    different_neighbors++;
+                }
             }
 
         }
         G_debug(3, "num neighbours = %d", AList->n_values);
+
+        /* only dissolve areas if there is at least one different neighbor
+         * enforces dissolving only along boundaries of reference areas */
+        if (at_boundary && !different_neighbors)
+            continue;
 
         /* Go through the list of neighbours and find the one with the longest
          * boundary */
