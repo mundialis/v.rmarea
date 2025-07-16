@@ -253,7 +253,8 @@ int remove_small_areas_ext(struct Map_info *Map, double thresh,
         }
         nsize = Vect_get_area_area(Map, narea);
 
-        if (nsize > size) {
+        if (1 || nsize > size) {
+            /* because of cats constraints, always remove this centroid */
             /* neighbour is larger, remove this centroid */
             centroid = Vect_get_area_centroid(Map, area);
             if (centroid > 0) {
@@ -265,6 +266,7 @@ int remove_small_areas_ext(struct Map_info *Map, double thresh,
             }
         }
         else {
+            /* because of cats constraints, the neighbour might not be allowed to be removed */
             /* neighbour is smaller, remove neighbour */
             ncentroid = 0;
             narea = 0;
@@ -498,7 +500,8 @@ int remove_small_areas_nat(struct Map_info *Map, double thresh,
         }
         nsize = Vect_get_area_area(Map, narea);
 
-        if (nsize > size) {
+        if (1 || nsize > size) {
+            /* because of cats constraints, always remove this centroid */
             /* neighbour is larger, remove this centroid */
             centroid = Vect_get_area_centroid(Map, area);
             if (centroid > 0) {
@@ -510,6 +513,7 @@ int remove_small_areas_nat(struct Map_info *Map, double thresh,
             }
         }
         else {
+            /* because of cats constraints, the neighbour might not be allowed to be removed */
             /* neighbour is smaller, remove neighbour */
             ncentroid = 0;
             narea = 0;
