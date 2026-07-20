@@ -79,12 +79,13 @@ static int comp_attrs(struct line_cats *ACats, struct line_cats *BCats,
     return 0;
 }
 
-
 int remove_small_areas_nat(struct Map_info *, double, struct Map_info *,
-                           double *, int, dbCatValArray *, int, struct cat_list *, int);
+                           double *, int, dbCatValArray *, int,
+                           struct cat_list *, int);
 
 int remove_small_areas_ext(struct Map_info *, double, struct Map_info *,
-                           double *, int, dbCatValArray *, int, struct cat_list *, int);
+                           double *, int, dbCatValArray *, int,
+                           struct cat_list *, int);
 
 /*!
    \brief Remove small areas from the map map.
@@ -102,15 +103,17 @@ int remove_small_areas_ext(struct Map_info *, double, struct Map_info *,
  */
 
 int remove_small_areas(struct Map_info *Map, double thresh,
-                       struct Map_info *Err, double *removed_area,
-                       int layer, dbCatValArray *cvarr, int ncols,
+                       struct Map_info *Err, double *removed_area, int layer,
+                       dbCatValArray *cvarr, int ncols,
                        struct cat_list *cat_list, int at_boundary)
 {
 
     if (Map->format == GV_FORMAT_NATIVE)
-        return remove_small_areas_nat(Map, thresh, Err, removed_area, layer, cvarr, ncols, cat_list, at_boundary);
+        return remove_small_areas_nat(Map, thresh, Err, removed_area, layer,
+                                      cvarr, ncols, cat_list, at_boundary);
     else
-        return remove_small_areas_ext(Map, thresh, Err, removed_area, layer, cvarr, ncols, cat_list, at_boundary);
+        return remove_small_areas_ext(Map, thresh, Err, removed_area, layer,
+                                      cvarr, ncols, cat_list, at_boundary);
 }
 
 int remove_small_areas_ext(struct Map_info *Map, double thresh,
@@ -189,7 +192,8 @@ int remove_small_areas_ext(struct Map_info *Map, double thresh,
             if (ncentroid != 0) {
                 Vect_read_line(Map, NULL, BCats, ncentroid);
                 if (comp_attrs(ACats, BCats, cvarr, layer, ncols) == 0) {
-                    Vect_list_append(AList, neighbour); /* this checks for duplicity */
+                    Vect_list_append(AList,
+                                     neighbour); /* this checks for duplicity */
                 }
                 else {
                     /* neighbor with different attributes */
@@ -266,7 +270,8 @@ int remove_small_areas_ext(struct Map_info *Map, double thresh,
             }
         }
         else {
-            /* because of cats constraints, the neighbour might not be allowed to be removed */
+            /* because of cats constraints, the neighbour might not be allowed
+             * to be removed */
             /* neighbour is smaller, remove neighbour */
             ncentroid = 0;
             narea = 0;
@@ -424,14 +429,14 @@ int remove_small_areas_nat(struct Map_info *Map, double thresh,
             if (ncentroid != 0) {
                 Vect_read_line(Map, NULL, BCats, ncentroid);
                 if (comp_attrs(ACats, BCats, cvarr, layer, ncols) == 0) {
-                    Vect_list_append(AList, neighbour); /* this checks for duplicity */
+                    Vect_list_append(AList,
+                                     neighbour); /* this checks for duplicity */
                 }
                 else {
                     /* neighbor with different attributes */
                     different_neighbors++;
                 }
             }
-
         }
         G_debug(3, "num neighbours = %d", AList->n_values);
 
@@ -513,7 +518,8 @@ int remove_small_areas_nat(struct Map_info *Map, double thresh,
             }
         }
         else {
-            /* because of cats constraints, the neighbour might not be allowed to be removed */
+            /* because of cats constraints, the neighbour might not be allowed
+             * to be removed */
             /* neighbour is smaller, remove neighbour */
             ncentroid = 0;
             narea = 0;

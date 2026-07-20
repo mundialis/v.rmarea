@@ -3,7 +3,7 @@
 Steps when releasing:
 
 - Run in terminal
-  ```
+  ```bash
   ESTIMATED_VERSION=1.0.0
   REPO_NAME=mundialis/v.rmarea
 

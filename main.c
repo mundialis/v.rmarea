@@ -30,7 +30,7 @@ static void error_handler_err(void *p);
 int main(int argc, char *argv[])
 {
     struct Map_info In, Out, Err, *pErr;
-    int with_z, native;
+    int with_z;
     struct GModule *module;
     struct {
         struct Option *in, *field, *out, *thresh, *err, *cols, *where, *cats;
@@ -42,7 +42,7 @@ int main(int argc, char *argv[])
     int count, count_total;
     double size;
     int layer;
-    int ncols, ncols_table, col, nrec, i, j;
+    int ncols, ncols_table, col, i, j;
     struct field_info *Fi = NULL;
     dbDriver *driver = NULL;
     dbString table_name;
@@ -102,7 +102,8 @@ int main(int argc, char *argv[])
     flag.at_boundary->label =
         _("Only remove areas along boundaries of reference areas");
     flag.at_boundary->description =
-        _("At least one neighboring area must have selected attributes different from the current area");
+        _("At least one neighboring area must have selected attributes "
+          "different from the current area");
 
     if (G_parser(argc, argv))
         exit(EXIT_FAILURE);
@@ -166,8 +167,6 @@ int main(int argc, char *argv[])
     Vect_hist_copy(&In, &Out);
     Vect_hist_command(&Out);
 
-    native = Vect_maptype(&Out) == GV_FORMAT_NATIVE;
-
     /* columns */
     ncols = 0;
     columns = opt.cols->answers;
@@ -208,8 +207,8 @@ int main(int argc, char *argv[])
 
         if (use_col) {
             db_CatValArray_init(&cvarr[i]);
-            nrec = db_select_CatValArray(driver, Fi->table, catcol, colname,
-                                         NULL, &cvarr[i]);
+            db_select_CatValArray(driver, Fi->table, catcol, colname, NULL,
+                                  &cvarr[i]);
             i++;
         }
     }
@@ -242,7 +241,7 @@ int main(int argc, char *argv[])
                                    ncols, cat_list, flag.at_boundary->answer);
         if (count > 0) {
             count_total += count;
-            
+
             Vect_build_partial(&Out, GV_BUILD_NONE);
             Vect_build_partial(&Out, GV_BUILD_CENTROIDS);
         }
