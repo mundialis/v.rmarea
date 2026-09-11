@@ -1,10 +1,23 @@
 ---
-name: Python Flake8, black and pylint code quality check
+name: Linting and code quality check
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
 
 jobs:
   lint:
-    uses: mundialis/github-workflows/.github/workflows/linting.yml@1.6.0
+    uses: mundialis/github-workflows/.github/workflows/linting.yml@main
     with:
-      VALIDATE_HTML: false
+      pylint-version: '2.17.4'
+      VALIDATE_JAVASCRIPT_STANDARD: false
+      BASH_SEVERITY: 'warning'
+    # the workflow requires permissions that need to be granted by the parent job:
+    permissions:
+      contents: read
+      packages: read
+      # To report GitHub Actions status checks
+      statuses: write

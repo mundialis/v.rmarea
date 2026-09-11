@@ -6,23 +6,10 @@ on:
     branches: [main]
 
 jobs:
-  build-grass-manual:
-    name: build-grass-manual
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - name: Creation of GRASS GIS addon manual
-        run: |
-          ADDON_NAME=$(echo "${GITHUB_REPOSITORY}" | cut -d "/" -f 2)
-          wget -O manual_Dockerfile https://raw.githubusercontent.com/mundialis/github-workflows/main/grass-gis-manual-docker/Dockerfile
-          docker build -f manual_Dockerfile \
-            --build-arg ADDON_NAME="$ADDON_NAME" \
-            --build-arg GITHUB_REPOSITORY="$GITHUB_REPOSITORY" \
-            -t grass-addon-manual .
-          ID=$(docker create grass-addon-manual)
-          echo "$ID"
-          docker cp "$ID":/src/build/docs/html public
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: "public"
+  grass-manual:
+    uses: mundialis/github-workflows/.github/workflows/grass-manual.yml@main
+    # the workflow requires permissions that need to be granted by the parent job:
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
